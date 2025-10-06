@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>منصة مشاريع التخرج | الصفحة الرئيسية</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { font-family: 'Cairo', Arial, sans-serif; background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%); margin: 0; padding: 0; }
+    .container { max-width: 650px; margin: 60px auto; background: #fff; border-radius: 18px; box-shadow: 0 8px 32px rgba(44,62,80,0.12); padding: 50px 35px 35px 35px; position: relative; }
+    header { text-align: center; margin-bottom: 25px; }
+    header img { width: 80px; height: auto; margin-bottom: 12px; display: inline-block; }
+    h1 { color: #2980b9; font-size: 2.2em; font-weight: 700; text-align: center; margin-bottom: 12px; }
+    .desc { text-align:center; color:#636e72; font-size:1.1em; margin-bottom:20px; }
+    .roles { display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; margin-top: 30px; }
+    .role-card { background: #f5fafd; border-radius: 12px; box-shadow: 0 2px 8px rgba(44,62,80,0.08); padding: 28px 22px; text-align: center; width: 180px; transition: box-shadow 0.2s; }
+    .role-card:hover { box-shadow: 0 4px 16px rgba(44,62,80,0.16); }
+    .role-card i { font-size: 2.5em; color: #2980b9; margin-bottom: 10px; }
+    .role-card h2 { font-size: 1.2em; color: #2980b9; margin-bottom: 8px; }
+    .role-card a { display: block; background:#2980b9; color:#fff; padding:10px 0; border-radius:6px; text-decoration:none; font-weight:bold; margin-top:10px; }
+    .role-card a:hover { background:#1abc9c; }
+    footer { text-align: center; margin-top: 45px; color: #636e72; font-size: 0.95em; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <img src="6f247f96-6c0f-4c50-a15e-ccebce79a2d7.jpg" alt="شعار الكلية">
+      <h1>منصة مشاريع التخرج</h1>
+    </header>
+    <div class="desc">
+      اختر نوع الدخول للانتقال إلى الصفحة المناسبة حسب صلاحيتك.
+    </div>
+    <div class="roles">
+      <div class="role-card">
+        <i class="fa-solid fa-user-tie"></i>
+        <h2>المشرف</h2>
+  <a href="login.php?role=admin">دخول المشرف</a>
+      </div>
+      <div class="role-card">
+        <i class="fa-solid fa-user-graduate"></i>
+        <h2>الطالب</h2>
+  <a href="login.php?role=student">دخول الطالب</a>
+      </div>
+      <div class="role-card">
+        <i class="fa-solid fa-user"></i>
+        <h2>الزائر</h2>
+        <a href="home_visitor.html">دخول الزائر</a>
+      </div>
+    </div>
+    <footer>
+      جميع الحقوق محفوظة &copy; كلية تقنية المعلومات 2025
+    </footer>
+  </div>
+</body>
+</html>
+        </select>
+        <input type="text" id="search_keywords" placeholder="بحث بالكلمات المفتاحية" oninput="filterProjects()" style="margin-top:10px;width:60%;">
+      </div>
+      <!-- سيتم عرض المشاريع السابقة هنا مستقبلاً -->
+      <button onclick="suggestAI()" style="background:#e67e22;color:#fff;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;">اقتراح ملخص بالذكاء الاصطناعي</button>
+      <script>
+        function filterProjects() {
+          // كود الفلترة سيضاف لاحقاً عند عرض المشاريع من الأرشيف
+        }
+        function suggestAI() {
+          alert('سيتم إضافة ميزة الذكاء الاصطناعي قريباً!');
+        }
+      </script>
+    </div>
+
+      <label for="year">السنة</label>
+      <input type="number" name="year" id="year" placeholder="السنة" required>
+
+      <label for="abstract">ملخص المشروع</label>
+      <textarea name="abstract" id="abstract" placeholder="ملخص المشروع" required></textarea>
+
+      <div class="ai-section">
+        <label for="ai_keywords">كلمات مفتاحية (ذكاء اصطناعي يقترح كلمات مرتبطة بالمشروع)</label>
+        <input type="text" name="ai_keywords" id="ai_keywords" placeholder="مثال: تعلم آلي، معالجة صور، روبوتات">
+        <small>يمكنك إدخال كلمات أو ترك الحقل ليتم اقتراح كلمات تلقائياً مستقبلاً.</small>
+      </div>
+
+      <button type="submit">إرسال المشروع للأرشيف</button>
+    </form>
+
+    <div class="archive">
+      <h2>أرشيف المشاريع السابقة</h2>
+      <!-- سيتم عرض المشاريع السابقة هنا مستقبلاً -->
+    </div>
+  </div>
+</body>
+</html>
