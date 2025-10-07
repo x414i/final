@@ -126,7 +126,8 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] !== 'admin' && $_SESSION[
       <li><a href="admin_dashboard.php" class="active"><i class="fa-solid fa-house"></i> الرئيسية</a></li>
       <li><a href="activate_users.php"><i class="fa-solid fa-user-check"></i> تفعيل الحسابات</a></li>
       <li><a href="view_users.php"><i class="fa-solid fa-users"></i> عرض المستخدمين</a></li>
-      <!-- يمكن إضافة روابط أخرى هنا -->
+      <li><a href="add_user.php"><i class="fa-solid fa-user-plus"></i> إضافة مستخدم</a></li>
+      <li><a href="review_projects.php"><i class="fa-solid fa-file-circle-check"></i> مراجعة المشاريع</a></li>
     </ul>
   </div>
   <div class="main-content">
@@ -135,7 +136,7 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] !== 'admin' && $_SESSION[
         <h3>أهلاً بك، <?php echo htmlspecialchars($_SESSION['role']); ?>!</h3>
       </div>
       <div class="user-info">
-        <a href="logout.php"><i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج</a>
+        <a href="http://localhost/final/"><i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج</a>
       </div>
     </header>
     <div class="content">
