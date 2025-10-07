@@ -152,6 +152,8 @@ $result = $conn->query("SELECT id, username, email, role, active, created_at FRO
       <li><a href="admin_dashboard.php"><i class="fa-solid fa-house"></i> الرئيسية</a></li>
       <li><a href="activate_users.php"><i class="fa-solid fa-user-check"></i> تفعيل الحسابات</a></li>
       <li><a href="view_users.php" class="active"><i class="fa-solid fa-users"></i> عرض المستخدمين</a></li>
+      <li><a href="add_user.php"><i class="fa-solid fa-user-plus"></i> إضافة مستخدم</a></li>
+      <li><a href="review_projects.php"><i class="fa-solid fa-file-circle-check"></i> مراجعة المشاريع</a></li>
     </ul>
   </div>
   <div class="main-content">
