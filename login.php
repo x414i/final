@@ -3,16 +3,15 @@
 session_start();
 require_once 'db.php'; // ملف الاتصال بقاعدة البيانات
 
-// تحديد الدور من الرابط
-$role = isset($_GET['role']) ? $_GET['role'] : '';
+// صفحة تسجيل الدخول الذكية
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $username = trim($_POST['username']);
   $password = $_POST['password'];
-  $role = isset($_POST['role']) ? $_POST['role'] : $role;
 
-  $stmt = $conn->prepare("SELECT * FROM users WHERE username = ? AND role = ? LIMIT 1");
-  $stmt->bind_param('ss', $username, $role);
+  // البحث عن المستخدم بالاسم فقط
+  $stmt = $conn->prepare("SELECT * FROM users WHERE username = ? LIMIT 1");
+  $stmt->bind_param('s', $username);
   $stmt->execute();
   $result = $stmt->get_result();
   if ($result->num_rows === 1) {
@@ -34,32 +33,153 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $error = 'كلمة المرور غير صحيحة.';
     }
   } else {
-    $error = 'اسم المستخدم أو الدور غير صحيح.';
+    $error = 'اسم المستخدم غير صحيح.';
   }
 }
 ?>
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <title>تسجيل الدخول</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body { font-family: 'Cairo', Arial, sans-serif; background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%); margin: 0; padding: 0; }
-    .container { max-width: 500px; margin: 50px auto; background: #fff; border-radius: 16px; box-shadow: 0 8px 32px rgba(44,62,80,0.12); padding: 40px 30px 30px 30px; position: relative; }
-    header { text-align: center; margin-bottom: 20px; }
-    header img { width: 70px; height: auto; margin-bottom: 10px; display: inline-block; }
-    h1 { color: #2980b9; font-size: 2.2em; font-weight: 700; text-align: center; margin-bottom: 10px; }
-    form { margin-top: 10px; }
-    label { display: block; margin-top: 18px; color: #34495e; font-weight: 600; }
-    input { width: 100%; padding: 12px; margin-top: 7px; border-radius: 6px; border: 1px solid #b2bec3; font-size: 1em; background: #f7f7f7; transition: border-color 0.2s; }
-    input:focus { border-color: #2980b9; outline: none; }
-    button { background: linear-gradient(90deg, #2980b9 0%, #1abc9c 100%); color: #fff; border: none; padding: 14px 0; border-radius: 6px; margin-top: 25px; cursor: pointer; font-size: 1.1em; font-weight: bold; width: 100%; box-shadow: 0 2px 8px #ccc; transition: background 0.2s; }
-    button:hover { background: linear-gradient(90deg, #1abc9c 0%, #2980b9 100%); }
-    .error { color: #e74c3c; text-align: center; margin-top: 10px; }
-    .login-icon { display: block; text-align: center; font-size: 3em; color: #1abc9c; margin-bottom: 15px; }
-    footer { text-align: center; margin-top: 40px; color: #636e72; font-size: 0.95em; }
+    :root {
+        --primary-color: #3498db;
+        --secondary-color: #2ecc71;
+        --background-color: #f4f7f6;
+        --container-bg: #ffffff;
+        --text-color: #333;
+        --input-bg: #ecf0f1;
+        --border-color: #bdc3c7;
+    }
+    body {
+        font-family: 'Cairo', Arial, sans-serif;
+        background-color: var(--background-color);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+    .container {
+        background: var(--container-bg);
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        padding: 40px;
+        width: 100%;
+        max-width: 450px;
+        animation: fadeIn 0.5s ease-in-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    header {
+        text-align: center;
+        margin-bottom: 25px;
+    }
+    header img {
+        width: 80px;
+        height: auto;
+        margin-bottom: 15px;
+    }
+    h1 {
+        color: var(--primary-color);
+        font-size: 2em;
+        font-weight: 700;
+        margin: 0;
+    }
+    .input-group {
+        position: relative;
+        margin-bottom: 25px;
+    }
+    .input-group i {
+        position: absolute;
+        left: 15px; /* Adjusted for RTL */
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--border-color);
+        transition: color 0.3s;
+    }
+    input, select {
+        width: 100%;
+        padding: 15px 45px 15px 20px; /* Padding adjusted for icon */
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        font-size: 1em;
+        background: var(--input-bg);
+        transition: all 0.3s;
+        box-sizing: border-box;
+    }
+    select {
+        padding: 15px 20px;
+        appearance: none;
+        background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007CB2%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+        background-repeat: no-repeat;
+        background-position: left 1.2em top 50%;
+        background-size: .65em auto;
+    }
+    input::placeholder {
+        color: #95a5a6;
+    }
+    input:focus, select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    }
+    input:focus ~ i { /* Use general sibling combinator */
+        color: var(--primary-color);
+    }
+    button {
+        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+        color: #fff;
+        border: none;
+        padding: 15px 0;
+        border-radius: 10px;
+        margin-top: 15px;
+        cursor: pointer;
+        font-size: 1.1em;
+        font-weight: bold;
+        width: 100%;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+    .error {
+        text-align: center;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        color: #c0392b;
+        background: #f2dede;
+    }
+    footer {
+        text-align: center;
+        margin-top: 30px;
+        color: #7f8c8d;
+        font-size: 0.9em;
+    }
+    .register-link {
+        text-align: center;
+        margin-top: 20px;
+    }
+    .register-link a {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.3s;
+    }
+    .register-link a:hover {
+        text-decoration: underline;
+        color: var(--secondary-color);
+    }
   </style>
 </head>
 <body>
@@ -68,35 +188,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <img src="6f247f96-6c0f-4c50-a15e-ccebce79a2d7.jpg" alt="شعار الكلية">
       <h1>تسجيل الدخول</h1>
     </header>
-    <span class="login-icon"><i class="fa-solid fa-user-lock"></i></span>
     <?php if ($error): ?>
       <div class="error"><?php echo $error; ?></div>
     <?php endif; ?>
     <form method="POST">
-      <label for="username"><i class="fa-solid fa-user"></i> اسم المستخدم</label>
-      <input type="text" id="username" name="username" required>
-      <label for="password"><i class="fa-solid fa-key"></i> كلمة المرور</label>
-      <input type="password" id="password" name="password" required>
-      <!-- الدور يظهر تلقائيًا إذا أتيت من الرابط، أو يمكن اختياره -->
-      <?php if ($role): ?>
-        <input type="hidden" name="role" value="<?php echo htmlspecialchars($role); ?>">
-        <div style="margin:10px 0; color:#2980b9; font-weight:bold; text-align:center;">الدور: <?php 
-            if ($role === 'admin') echo 'مدير النظام';
-            elseif ($role === 'supervisor') echo 'مشرف';
-            else echo 'طالب';
-        ?></div>
-      <?php else: ?>
-        <label for="role"><i class="fa-solid fa-user-tag"></i> الدور</label>
-        <select name="role" id="role" required>
-          <option value="">اختر الدور</option>
-          <option value="student">طالب</option>
-          <option value="supervisor">مشرف</option>
-          <option value="admin">مدير النظام</option>
-        </select>
-      <?php endif; ?>
-      <button type="submit"><i class="fa-solid fa-sign-in-alt"></i> دخول</button>
-      <div style="text-align:center; margin-top:18px;">
-        <a href="register.html" style="color:#2980b9; text-decoration:underline; font-weight:bold;">إنشاء حساب جديد</a>
+      <div class="input-group">
+        <input type="text" id="username" name="username" placeholder="اسم المستخدم" required>
+        <i class="fa-solid fa-user"></i>
+      </div>
+      <div class="input-group">
+        <input type="password" id="password" name="password" placeholder="كلمة المرور" required>
+        <i class="fa-solid fa-key"></i>
+      </div>
+      
+      <!-- تم حذف حقل اختيار الدور -->
+
+      <button type="submit">دخول</button>
+      <div class="register-link">
+        ليس لديك حساب؟ <a href="register.php">أنشئ حسابًا جديدًا</a>
       </div>
     </form>
     <footer>
