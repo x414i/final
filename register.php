@@ -1,5 +1,4 @@
 <?php
-// صفحة تسجيل طالب جديد
 require_once 'db.php';
 $error = '';
 $success = '';
@@ -9,7 +8,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'];
     $role = $_POST['role'];
 
-    // تحقق من وجود المستخدم مسبقاً
     $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ? LIMIT 1");
     $stmt->bind_param('ss', $username, $email);
     $stmt->execute();
@@ -77,6 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <select id="role" name="role" required>
         <option value="student">طالب</option>
         <option value="supervisor">مشرف</option>
+        <option value="admin">مدير النظام</option>
       </select>
       <button type="submit"><i class="fa-solid fa-user-plus"></i> إنشاء الحساب</button>
     </form>

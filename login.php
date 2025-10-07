@@ -80,13 +80,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <!-- الدور يظهر تلقائيًا إذا أتيت من الرابط، أو يمكن اختياره -->
       <?php if ($role): ?>
         <input type="hidden" name="role" value="<?php echo htmlspecialchars($role); ?>">
-        <div style="margin:10px 0; color:#2980b9; font-weight:bold; text-align:center;">الدور: <?php echo ($role=='admin'?'مشرف':'طالب'); ?></div>
+        <div style="margin:10px 0; color:#2980b9; font-weight:bold; text-align:center;">الدور: <?php 
+            if ($role === 'admin') echo 'مدير النظام';
+            elseif ($role === 'supervisor') echo 'مشرف';
+            else echo 'طالب';
+        ?></div>
       <?php else: ?>
         <label for="role"><i class="fa-solid fa-user-tag"></i> الدور</label>
         <select name="role" id="role" required>
           <option value="">اختر الدور</option>
-          <option value="admin">مشرف</option>
           <option value="student">طالب</option>
+          <option value="supervisor">مشرف</option>
+          <option value="admin">مدير النظام</option>
         </select>
       <?php endif; ?>
       <button type="submit"><i class="fa-solid fa-sign-in-alt"></i> دخول</button>
