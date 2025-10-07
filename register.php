@@ -6,7 +6,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
     $password = $_POST['password'];
-    $role = $_POST['role'];
+    $role = 'student'; // تعيين الدور كـ "طالب" بشكل افتراضي
 
     $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ? LIMIT 1");
     $stmt->bind_param('ss', $username, $email);
@@ -27,28 +27,148 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <title>إنشاء حساب جديد</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body { font-family: 'Cairo', Arial, sans-serif; background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%); margin: 0; padding: 0; }
-    .container { max-width: 500px; margin: 50px auto; background: #fff; border-radius: 16px; box-shadow: 0 8px 32px rgba(44,62,80,0.12); padding: 40px 30px 30px 30px; position: relative; }
-    header { text-align: center; margin-bottom: 20px; }
-    header img { width: 70px; height: auto; margin-bottom: 10px; display: inline-block; }
-    h1 { color: #2980b9; font-size: 2.2em; font-weight: 700; text-align: center; margin-bottom: 10px; }
-    form { margin-top: 10px; }
-    label { display: block; margin-top: 18px; color: #34495e; font-weight: 600; }
-    input, select { width: 100%; padding: 12px; margin-top: 7px; border-radius: 6px; border: 1px solid #b2bec3; font-size: 1em; background: #f7f7f7; transition: border-color 0.2s; }
-    input:focus, select:focus { border-color: #2980b9; outline: none; }
-    button { background: linear-gradient(90deg, #2980b9 0%, #1abc9c 100%); color: #fff; border: none; padding: 14px 0; border-radius: 6px; margin-top: 25px; cursor: pointer; font-size: 1.1em; font-weight: bold; width: 100%; box-shadow: 0 2px 8px #ccc; transition: background 0.2s; }
-    button:hover { background: linear-gradient(90deg, #1abc9c 0%, #2980b9 100%); }
-    .register-icon { display: block; text-align: center; font-size: 3em; color: #1abc9c; margin-bottom: 15px; }
-    .error { color: #e74c3c; text-align: center; margin-top: 10px; }
-    .success { color: #27ae60; text-align: center; margin-top: 10px; }
-    footer { text-align: center; margin-top: 40px; color: #636e72; font-size: 0.95em; }
+    :root {
+        --primary-color: #3498db;
+        --secondary-color: #2ecc71;
+        --background-color: #f4f7f6;
+        --container-bg: #ffffff;
+        --text-color: #333;
+        --input-bg: #ecf0f1;
+        --border-color: #bdc3c7;
+    }
+    body {
+        font-family: 'Cairo', Arial, sans-serif;
+        background-color: var(--background-color);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+    .container {
+        background: var(--container-bg);
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        padding: 40px;
+        width: 100%;
+        max-width: 450px;
+        animation: fadeIn 0.5s ease-in-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    header {
+        text-align: center;
+        margin-bottom: 25px;
+    }
+    header img {
+        width: 80px;
+        height: auto;
+        margin-bottom: 15px;
+    }
+    h1 {
+        color: var(--primary-color);
+        font-size: 2em;
+        font-weight: 700;
+        margin: 0;
+    }
+    .input-group {
+        position: relative;
+        margin-bottom: 25px;
+    }
+    .input-group i {
+        position: absolute;
+        left: 15px; /* Adjusted for RTL */
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--border-color);
+        transition: color 0.3s;
+    }
+    input {
+        width: 100%;
+        padding: 15px 45px 15px 20px; /* Padding adjusted for icon */
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        font-size: 1em;
+        background: var(--input-bg);
+        transition: all 0.3s;
+        box-sizing: border-box;
+    }
+    input::placeholder {
+        color: #95a5a6;
+    }
+    input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    }
+    input:focus ~ i { /* Use general sibling combinator */
+        color: var(--primary-color);
+    }
+    button {
+        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+        color: #fff;
+        border: none;
+        padding: 15px 0;
+        border-radius: 10px;
+        margin-top: 15px;
+        cursor: pointer;
+        font-size: 1.1em;
+        font-weight: bold;
+        width: 100%;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        position: relative;
+        overflow: hidden;
+    }
+    button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+    .error, .success {
+        text-align: center;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .error {
+        color: #c0392b;
+        background: #f2dede;
+    }
+    .success {
+        color: #27ae60;
+        background: #d4edda;
+    }
+    footer {
+        text-align: center;
+        margin-top: 30px;
+        color: #7f8c8d;
+        font-size: 0.9em;
+    }
+    .login-link {
+        text-align: center;
+        margin-top: 20px;
+    }
+    .login-link a {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.3s;
+    }
+    .login-link a:hover {
+        text-decoration: underline;
+        color: var(--secondary-color);
+    }
   </style>
 </head>
 <body>
@@ -57,28 +177,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <img src="6f247f96-6c0f-4c50-a15e-ccebce79a2d7.jpg" alt="شعار الكلية">
       <h1>إنشاء حساب جديد</h1>
     </header>
-    <span class="register-icon"><i class="fa-solid fa-user-plus"></i></span>
     <?php if ($error): ?>
       <div class="error"><?php echo $error; ?></div>
     <?php endif; ?>
     <?php if ($success): ?>
       <div class="success"><?php echo $success; ?></div>
-    <?php endif; ?>
+      <div class="login-link" style="margin-top: 20px;">
+        <a href="login.php">العودة إلى صفحة تسجيل الدخول</a>
+      </div>
+    <?php else: ?>
     <form method="POST">
-      <label for="username"><i class="fa-solid fa-user"></i> اسم المستخدم</label>
-      <input type="text" id="username" name="username" required>
-      <label for="email"><i class="fa-solid fa-envelope"></i> البريد الإلكتروني</label>
-      <input type="email" id="email" name="email" required>
-      <label for="password"><i class="fa-solid fa-key"></i> كلمة المرور</label>
-      <input type="password" id="password" name="password" required>
-      <label for="role"><i class="fa-solid fa-users"></i> نوع المستخدم</label>
-      <select id="role" name="role" required>
-        <option value="student">طالب</option>
-        <option value="supervisor">مشرف</option>
-        <option value="admin">مدير النظام</option>
-      </select>
-      <button type="submit"><i class="fa-solid fa-user-plus"></i> إنشاء الحساب</button>
+      <div class="input-group">
+        <input type="text" id="username" name="username" placeholder="اسم المستخدم" required>
+        <i class="fa-solid fa-user"></i>
+      </div>
+      <div class="input-group">
+        <input type="email" id="email" name="email" placeholder="البريد الإلكتروني" required>
+        <i class="fa-solid fa-envelope"></i>
+      </div>
+      <div class="input-group">
+        <input type="password" id="password" name="password" placeholder="كلمة المرور" required>
+        <i class="fa-solid fa-key"></i>
+      </div>
+      <input type="hidden" name="role" value="student">
+      <button type="submit">إنشاء الحساب</button>
     </form>
+    <div class="login-link">
+      لديك حساب بالفعل؟ <a href="login.php">سجل الدخول</a>
+    </div>
+    <?php endif; ?>
     <footer>
       جميع الحقوق محفوظة &copy; كلية تقنية المعلومات 2025
     </footer>
