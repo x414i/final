@@ -2,10 +2,92 @@
 session_start();
 include 'db.php';
 
+// إعداد نظام تسجيل الأخطاء - مع تحسينات
+function setupLogging() {
+    $logDir = 'logs/';
+    
+    // التحقق من وجود المجلد وإنشاؤه إذا لم يكن موجوداً
+    if (!is_dir($logDir)) {
+        if (!mkdir($logDir, 0755, true)) {
+            // إذا فشل إنشاء المجلد، حاول استخدام مجلد مؤقت
+            $logDir = sys_get_temp_dir() . '/project_logs/';
+            if (!is_dir($logDir) && !mkdir($logDir, 0755, true)) {
+                // إذا فشل أيضاً، استخدم المجلد الحالي
+                $logDir = './';
+            }
+        }
+    }
+    
+    // التحقق من إمكانية الكتابة في المجلد
+    if (!is_writable($logDir)) {
+        // حاول تغيير الصلاحيات
+        @chmod($logDir, 0755);
+    }
+    
+    return $logDir;
+}
+
+function logError($message) {
+    $logDir = setupLogging();
+    
+    $logFile = $logDir . 'error_log_' . date('Y-m-d') . '.txt';
+    $timestamp = date('Y-m-d H:i:s');
+    $errorMessage = "[$timestamp] ERROR: $message" . PHP_EOL;
+    
+    // محاولة الكتابة مع التعامل مع الأخطاء
+    $result = @file_put_contents($logFile, $errorMessage, FILE_APPEND | LOCK_EX);
+    
+    if ($result === false) {
+        // إذا فشل الكتابة، عرض رسالة خطأ للمطور
+        error_log("فشل في كتابة سجل الأخطاء: " . $logFile);
+    }
+}
+
+function logInfo($message) {
+    $logDir = setupLogging();
+    
+    $logFile = $logDir . 'info_log_' . date('Y-m-d') . '.txt';
+    $timestamp = date('Y-m-d H:i:s');
+    $infoMessage = "[$timestamp] INFO: $message" . PHP_EOL;
+    
+    @file_put_contents($logFile, $infoMessage, FILE_APPEND | LOCK_EX);
+}
+
+// إنشاء مجلدات الرفع إذا لم تكن موجودة
+function setupUploadDirs() {
+    $dirs = ['uploads/pdfs/', 'uploads/code/'];
+    
+    foreach ($dirs as $dir) {
+        if (!is_dir($dir)) {
+            if (!mkdir($dir, 0755, true)) {
+                logError("فشل في إنشاء مجلد الرفع: $dir");
+                return false;
+            }
+        }
+        
+        // التحقق من إمكانية الكتابة
+        if (!is_writable($dir)) {
+            if (!chmod($dir, 0755)) {
+                logError("المجلد غير قابل للكتابة: $dir");
+                return false;
+            }
+        }
+    }
+    
+    return true;
+}
+
 // Redirect if user is not logged in or not a student
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
+    logError("محاولة وصول غير مصرح به إلى صفحة رفع المشروع - user_id: " . ($_SESSION['user_id'] ?? 'غير معروف'));
     header("Location: login.php");
     exit();
+}
+
+// إعداد مجلدات الرفع
+if (!setupUploadDirs()) {
+    $error = "هناك مشكلة في إعداد نظام الملفات. يرجى الاتصال بالدعم الفني.";
+    logError("فشل في إعداد مجلدات الرفع");
 }
 
 $error = '';
@@ -18,6 +100,7 @@ $result_sections = $conn->query($sql_sections);
 
 if (!$result_sections) {
     $error = "خطأ في جلب الأقسام: " . $conn->error;
+    logError("فشل في جلب الأقسام: " . $conn->error);
 }
 
 // Handle project upload
@@ -28,56 +111,168 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $section_id = intval($_POST['section_id']);
     $student_id = $_SESSION['user_id'];
 
+    logInfo("بدء محاولة رفع مشروع - الطالب: $student_id, العنوان: $title");
+
     // التحقق من صحة البيانات الأساسية
     if (empty($title) || empty($summary) || empty($year) || empty($section_id)) {
         $error = "جميع الحقول الإلزامية مطلوبة";
+        logError("بيانات ناقصة في النموذج - الطالب: $student_id");
     } else {
         // File upload handling
         $pdf_file_name = '';
-        if (isset($_FILES['pdf_file']) && $_FILES['pdf_file']['error'] === UPLOAD_ERR_OK) {
-            $pdf_target_dir = "uploads/pdfs/";
-            if (!is_dir($pdf_target_dir)) {
-                mkdir($pdf_target_dir, 0777, true);
-            }
-            // استخدم اسم الملف فقط بدلاً من المسار الكامل
-            $pdf_file_name = uniqid('pdf_') . '_' . basename($_FILES['pdf_file']['name']);
-            $pdf_file_path = $pdf_target_dir . $pdf_file_name;
-            if (!move_uploaded_file($_FILES['pdf_file']['tmp_name'], $pdf_file_path)) {
-                $error = "فشل في رفع ملف PDF.";
+        if (isset($_FILES['pdf_file']) && $_FILES['pdf_file']['error'] !== UPLOAD_ERR_NO_FILE) {
+            logInfo("معالجة ملف PDF - خطأ: " . $_FILES['pdf_file']['error'] . " - الطالب: $student_id");
+            
+            if ($_FILES['pdf_file']['error'] === UPLOAD_ERR_OK) {
+                $pdf_target_dir = "uploads/pdfs/";
+                
+                // التحقق من نوع الملف
+                $allowed_pdf_types = ['application/pdf', 'application/octet-stream'];
+                $file_type = $_FILES['pdf_file']['type'];
+                $file_extension = strtolower(pathinfo($_FILES['pdf_file']['name'], PATHINFO_EXTENSION));
+                
+                if (!in_array($file_type, $allowed_pdf_types) && $file_extension !== 'pdf') {
+                    $error = "نوع الملف غير مسموح به. يرجى رفع ملف PDF فقط.";
+                    logError("نوع ملف PDF غير مسموح به: $file_type - الامتداد: $file_extension - الطالب: $student_id");
+                } else {
+                    // التحقق من حجم الملف (10MB كحد أقصى)
+                    $max_file_size = 10 * 1024 * 1024; // 10MB
+                    if ($_FILES['pdf_file']['size'] > $max_file_size) {
+                        $error = "حجم ملف PDF كبير جداً. الحد الأقصى هو 10MB.";
+                        logError("حجم ملف PDF كبير: {$_FILES['pdf_file']['size']} - الطالب: $student_id");
+                    } else {
+                        // استخدم اسم الملف فقط بدلاً من المسار الكامل
+                        $pdf_file_name = uniqid('pdf_') . '_' . basename($_FILES['pdf_file']['name']);
+                        $pdf_file_path = $pdf_target_dir . $pdf_file_name;
+                        
+                        if (!move_uploaded_file($_FILES['pdf_file']['tmp_name'], $pdf_file_path)) {
+                            $error = "فشل في رفع ملف PDF.";
+                            $last_error = error_get_last();
+                            logError("فشل في نقل ملف PDF - الطالب: $student_id - المسار: $pdf_file_path - خطأ: " . ($last_error ? $last_error['message'] : 'غير معروف'));
+                        } else {
+                            logInfo("تم رفع ملف PDF بنجاح: $pdf_file_name - الطالب: $student_id - الحجم: {$_FILES['pdf_file']['size']}");
+                        }
+                    }
+                }
+            } else {
+                // معالجة أخطاء الرفع
+                $upload_errors = [
+                    UPLOAD_ERR_INI_SIZE => 'حجم الملف أكبر من المسموح به في الخادم',
+                    UPLOAD_ERR_FORM_SIZE => 'حجم الملف أكبر من المسموح به في النموذج',
+                    UPLOAD_ERR_PARTIAL => 'تم رفع جزء من الملف فقط',
+                    UPLOAD_ERR_NO_TMP_DIR => 'المجلد المؤقت غير موجود',
+                    UPLOAD_ERR_CANT_WRITE => 'فشل في كتابة الملف على القرص',
+                    UPLOAD_ERR_EXTENSION => 'رفع الملف متوقف بسبب امتداد غير مسموح'
+                ];
+                
+                $error_code = $_FILES['pdf_file']['error'];
+                $error_msg = $upload_errors[$error_code] ?? 'خطأ غير معروف في رفع الملف';
+                $error = "خطأ في رفع ملف PDF: $error_msg";
+                logError("خطأ في رفع ملف PDF - الرمز: $error_code - الرسالة: $error_msg - الطالب: $student_id");
             }
         }
 
         $code_file_name = '';
-        if (empty($error) && isset($_FILES['code_file']) && $_FILES['code_file']['error'] === UPLOAD_ERR_OK) {
-            $code_target_dir = "uploads/code/";
-            if (!is_dir($code_target_dir)) {
-                mkdir($code_target_dir, 0777, true);
-            }
-            // استخدم اسم الملف فقط بدلاً من المسار الكامل
-            $code_file_name = uniqid('code_') . '_' . basename($_FILES['code_file']['name']);
-            $code_file_path = $code_target_dir . $code_file_name;
-            if (!move_uploaded_file($_FILES['code_file']['tmp_name'], $code_file_path)) {
-                $error = "فشل في رفع ملف الكود.";
+        if (empty($error) && isset($_FILES['code_file']) && $_FILES['code_file']['error'] !== UPLOAD_ERR_NO_FILE) {
+            logInfo("معالجة ملف الكود - خطأ: " . $_FILES['code_file']['error'] . " - الطالب: $student_id");
+            
+            if ($_FILES['code_file']['error'] === UPLOAD_ERR_OK) {
+                $code_target_dir = "uploads/code/";
+                
+                // التحقق من نوع الملف
+                $allowed_code_types = [
+                    'application/zip', 
+                    'application/x-zip-compressed', 
+                    'application/x-rar-compressed', 
+                    'application/x-7z-compressed',
+                    'application/octet-stream'
+                ];
+                $allowed_extensions = ['zip', 'rar', '7z'];
+                
+                $file_type = $_FILES['code_file']['type'];
+                $file_extension = strtolower(pathinfo($_FILES['code_file']['name'], PATHINFO_EXTENSION));
+                
+                if (!in_array($file_type, $allowed_code_types) && !in_array($file_extension, $allowed_extensions)) {
+                    $error = "نوع الملف غير مسموح به. يرجى رفع ملف مضغوط (ZIP, RAR, 7Z) فقط.";
+                    logError("نوع ملف الكود غير مسموح به: $file_type - الامتداد: $file_extension - الطالب: $student_id");
+                } else {
+                    // التحقق من حجم الملف (20MB كحد أقصى)
+                    $max_file_size = 20 * 1024 * 1024; // 20MB
+                    if ($_FILES['code_file']['size'] > $max_file_size) {
+                        $error = "حجم ملف الكود كبير جداً. الحد الأقصى هو 20MB.";
+                        logError("حجم ملف الكود كبير: {$_FILES['code_file']['size']} - الطالب: $student_id");
+                    } else {
+                        // استخدم اسم الملف فقط بدلاً من المسار الكامل
+                        $code_file_name = uniqid('code_') . '_' . basename($_FILES['code_file']['name']);
+                        $code_file_path = $code_target_dir . $code_file_name;
+                        
+                        if (!move_uploaded_file($_FILES['code_file']['tmp_name'], $code_file_path)) {
+                            $error = "فشل في رفع ملف الكود.";
+                            $last_error = error_get_last();
+                            logError("فشل في نقل ملف الكود - الطالب: $student_id - المسار: $code_file_path - خطأ: " . ($last_error ? $last_error['message'] : 'غير معروف'));
+                        } else {
+                            logInfo("تم رفع ملف الكود بنجاح: $code_file_name - الطالب: $student_id - الحجم: {$_FILES['code_file']['size']}");
+                        }
+                    }
+                }
+            } else {
+                // معالجة أخطاء الرفع
+                $upload_errors = [
+                    UPLOAD_ERR_INI_SIZE => 'حجم الملف أكبر من المسموح به في الخادم',
+                    UPLOAD_ERR_FORM_SIZE => 'حجم الملف أكبر من المسموح به في النموذج',
+                    UPLOAD_ERR_PARTIAL => 'تم رفع جزء من الملف فقط',
+                    UPLOAD_ERR_NO_TMP_DIR => 'المجلد المؤقت غير موجود',
+                    UPLOAD_ERR_CANT_WRITE => 'فشل في كتابة الملف على القرص',
+                    UPLOAD_ERR_EXTENSION => 'رفع الملف متوقف بسبب امتداد غير مسموح'
+                ];
+                
+                $error_code = $_FILES['code_file']['error'];
+                $error_msg = $upload_errors[$error_code] ?? 'خطأ غير معروف في رفع الملف';
+                $error = "خطأ في رفع ملف الكود: $error_msg";
+                logError("خطأ في رفع ملف الكود - الرمز: $error_code - الرسالة: $error_msg - الطالب: $student_id");
             }
         }
 
         if (empty($error)) {
             // استخدم أسماء الملفات فقط في قاعدة البيانات
             $stmt = $conn->prepare("INSERT INTO projects (student_id, section_id, title, summary, year, pdf_file, code_file, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')");
-            $stmt->bind_param("iisssss", $student_id, $section_id, $title, $summary, $year, $pdf_file_name, $code_file_name);
+            
+            if ($stmt) {
+                $stmt->bind_param("iisssss", $student_id, $section_id, $title, $summary, $year, $pdf_file_name, $code_file_name);
 
-            if ($stmt->execute()) {
-                $success = "تم رفع المشروع بنجاح! سيتم مراجعته قريباً.";
-                // إعادة تعيين المتغيرات لعرض النموذج فارغ
-                $title = $summary = $year = $section_id = '';
+                if ($stmt->execute()) {
+                    $success = "تم رفع المشروع بنجاح! سيتم مراجعته قريباً.";
+                    logInfo("تم رفع المشروع بنجاح في قاعدة البيانات - الطالب: $student_id - المشروع: $title - PDF: $pdf_file_name - Code: $code_file_name");
+                    // إعادة تعيين المتغيرات لعرض النموذج فارغ
+                    $title = $summary = $year = $section_id = '';
+                } else {
+                    $error = "خطأ في قاعدة البيانات: " . $stmt->error;
+                    logError("خطأ في تنفيذ استعلام قاعدة البيانات: " . $stmt->error . " - الطالب: $student_id");
+                }
+                $stmt->close();
             } else {
-                $error = "خطأ في قاعدة البيانات: " . $stmt->error;
+                $error = "خطأ في إعداد استعلام قاعدة البيانات";
+                logError("فشل في إعداد استعلام قاعدة البيانات: " . $conn->error . " - الطالب: $student_id");
             }
-            $stmt->close();
         }
     }
 }
+
+// دالة لفحص حالة النظام
+function checkSystemStatus() {
+    $status = [
+        'logs_dir' => is_writable('logs/') || is_writable(sys_get_temp_dir()),
+        'uploads_dir' => is_writable('uploads/') && is_writable('uploads/pdfs/') && is_writable('uploads/code/'),
+        'max_upload_size' => min(ini_get('upload_max_filesize'), ini_get('post_max_size'))
+    ];
+    
+    return $status;
+}
+
+// فحص حالة النظام
+$system_status = checkSystemStatus();
 ?>
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -516,6 +711,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       justify-content: space-between;
       margin-top: 2rem;
     }
+
+    .file-requirements {
+      font-size: 0.8rem;
+      color: var(--gray);
+      margin-top: 5px;
+    }
   </style>
 </head>
 <body>
@@ -544,6 +745,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </nav>
 
     <div class="form-container">
+      <!-- إضافة حالة النظام للمساعدة في التشخيص -->
+      <div class="system-status">
+        <h4><i class="fas fa-info-circle"></i> حالة النظام:</h4>
+        <div class="status-item <?php echo $system_status['logs_dir'] ? 'good' : 'bad'; ?>">
+          <i class="fas fa-<?php echo $system_status['logs_dir'] ? 'check' : 'times'; ?>"></i>
+          مجلد السجلات: <?php echo $system_status['logs_dir'] ? 'جاهز' : 'غير قابل للكتابة'; ?>
+        </div>
+        <div class="status-item <?php echo $system_status['uploads_dir'] ? 'good' : 'bad'; ?>">
+          <i class="fas fa-<?php echo $system_status['uploads_dir'] ? 'check' : 'times'; ?>"></i>
+          مجلد الرفع: <?php echo $system_status['uploads_dir'] ? 'جاهز' : 'غير قابل للكتابة'; ?>
+        </div>
+        <div class="status-item good">
+          <i class="fas fa-check"></i>
+          الحد الأقصى لحجم الملف: <?php echo $system_status['max_upload_size']; ?>
+        </div>
+      </div>
+
       <div class="form-header">
         <h2><i class="fas fa-cloud-upload-alt"></i> رفع مشروع جديد</h2>
         <p>املأ النموذج أدناه لرفع مشروعك الجديد</p>
@@ -611,6 +829,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <option value="">اختر القسم</option>
                 <?php 
                 if ($result_sections && $result_sections->num_rows > 0) {
+                    // إعادة تعيين المؤشر لبداية النتائج
+                    $result_sections->data_seek(0);
                     while($row = $result_sections->fetch_assoc()) {
                         $selected = (isset($section_id) && $section_id == $row['id']) ? 'selected' : '';
                         echo "<option value='{$row['id']}' $selected>" . htmlspecialchars($row['name']) . "</option>";
@@ -635,7 +855,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <i class="fas fa-file-pdf"></i>
                 <h4>رفع ملف المشروع (PDF)</h4>
                 <p>يمكنك رفع ملف PDF يحتوي على توثيق المشروع</p>
-                <input type="file" name="pdf_file" id="pdf_file" class="file-input" accept="application/pdf">
+                <div class="file-requirements">الحد الأقصى للحجم: 10MB</div>
+                <input type="file" name="pdf_file" id="pdf_file" class="file-input" accept=".pdf,application/pdf">
               </div>
             </div>
 
@@ -644,7 +865,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <i class="fas fa-file-code"></i>
                 <h4>رفع كود المشروع (ZIP)</h4>
                 <p>يمكنك رفع ملف مضغوط يحتوي على كود المشروع</p>
-                <input type="file" name="code_file" id="code_file" class="file-input" accept="application/zip,.rar,.7z">
+                <div class="file-requirements">الحد الأقصى للحجم: 20MB - الأنواع المسموحة: ZIP, RAR, 7Z</div>
+                <input type="file" name="code_file" id="code_file" class="file-input" accept=".zip,.rar,.7z,application/zip,application/x-zip-compressed,application/x-rar-compressed,application/x-7z-compressed">
               </div>
             </div>
           </div>
@@ -776,7 +998,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           container.style.borderColor = '#ddd';
           container.style.background = '#f8f9fa';
           let fileInfo = container.querySelector('p');
-          fileInfo.innerHTML = container.querySelector('h4').nextElementSibling.textContent;
+          // إعادة النص الأصلي
+          if (this.name === 'pdf_file') {
+            fileInfo.innerHTML = 'يمكنك رفع ملف PDF يحتوي على توثيق المشروع';
+          } else {
+            fileInfo.innerHTML = 'يمكنك رفع ملف مضغوط يحتوي على كود المشروع';
+          }
         }
       });
     });
