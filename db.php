@@ -1,5 +1,4 @@
 <?php
-// ملف الاتصال بقاعدة البيانات
 $servername = "localhost";
 $username = "root";
 $password = "2002abdo0910264341";
