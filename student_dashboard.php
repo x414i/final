@@ -1,3 +1,29 @@
+<?php
+session_start();
+require_once 'db.php';
+
+// التحقق من أن المستخدم مسجل دخوله كطالب
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
+    header('Location: login.php');
+    exit;
+}
+
+$student_id = $_SESSION['user_id'];
+
+// جلب العدد الإجمالي للمشاريع المقبولة
+$total_result = $conn->query("SELECT COUNT(*) as total FROM projects WHERE status = 'approved'");
+$total_row = $total_result->fetch_assoc();
+$total_approved = $total_row['total'];
+
+// جلب مشروع الطالب الحالي
+$stmt = $conn->prepare("SELECT * FROM projects WHERE student_id = ?");
+$stmt->bind_param('i', $student_id);
+$stmt->execute();
+$project_result = $stmt->get_result();
+$project = $project_result->fetch_assoc();
+
+$my_project_exists = ($project !== null);
+?>
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -529,9 +555,9 @@
 
     <nav>
       <a href="index.html" class="active"><i class="fas fa-home"></i> الرئيسية</a>
-      <a href="projects.php"><i class="fas fa-project-diagram"></i> عرض المشاريع</a>
+      <a href="view_projects.php"><i class="fas fa-project-diagram"></i> عرض المشاريع</a>
       <a href="upload_project.php"><i class="fas fa-upload"></i> رفع مشروع</a>
-      <a href="logout.php"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
+      <a href="login.php"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
     </nav>
 
     <div class="main-content">
@@ -547,17 +573,17 @@
             <div class="stat-item">
               <i class="fas fa-check-circle"></i>
               <span>المشاريع المقبولة</span>
-              <strong><?php echo $total; ?></strong>
+              <strong><?php echo $total_approved; ?></strong>
             </div>
             <div class="stat-item">
               <i class="fas fa-lightbulb"></i>
               <span>مشروعك الحالي</span>
-              <strong><?php echo $my ? 'موجود' : 'لا يوجد'; ?></strong>
+              <strong><?php echo $my_project_exists ? 'موجود' : 'لا يوجد'; ?></strong>
             </div>
             <div class="stat-item">
               <i class="fas fa-hourglass-half"></i>
               <span>حالة المشروع</span>
-              <strong><?php echo $project ? ($project['status'] == 'pending' ? 'قيد المراجعة' : ($project['status'] == 'accepted' ? 'مقبول' : 'مرفوض')) : 'غير محدد'; ?></strong>
+              <strong><?php echo $project ? ($project['status'] == 'pending' ? 'قيد المراجعة' : ($project['status'] == 'approved' ? 'مقبول' : 'مرفوض')) : 'غير محدد'; ?></strong>
             </div>
           </div>
         </div>
@@ -571,7 +597,7 @@
             <p><strong>الحالة:</strong> <span class="status <?php echo $project['status']; ?>">
               <?php
                 if ($project['status'] == 'pending') echo 'قيد المراجعة';
-                elseif ($project['status'] == 'accepted') echo 'مقبول';
+                elseif ($project['status'] == 'approved') echo 'مقبول';
                 else echo 'مرفوض';
               ?>
             </span></p>
@@ -636,7 +662,7 @@
           <h3><i class="fas fa-tasks"></i> تقدم المشروع</h3>
           <div class="progress-container">
             <div class="progress-bar">
-              <div class="progress" style="width: <?php echo $project ? ($project['status'] == 'accepted' ? '100%' : ($project['status'] == 'pending' ? '50%' : '0%')) : '0%'; ?>"></div>
+              <div class="progress" style="width: <?php echo $project ? ($project['status'] == 'approved' ? '100%' : ($project['status'] == 'pending' ? '50%' : '0%')) : '0%'; ?>"></div>
             </div>
             <div class="progress-text">
               <span>بداية</span>
@@ -649,7 +675,7 @@
                 echo 'لم يتم رفع مشروع بعد';
               } else {
                 if ($project['status'] == 'pending') echo 'المشروع قيد المراجعة';
-                elseif ($project['status'] == 'accepted') echo 'تم قبول المشروع';
+                elseif ($project['status'] == 'approved') echo 'تم قبول المشروع';
                 else echo 'تم رفض المشروع';
               }
             ?>

@@ -12,22 +12,32 @@ if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'supe
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['project_id']) && isset($_POST['status'])) {
     $projectId = intval($_POST['project_id']);
     $status = $_POST['status'];
+    $supervisorId = $_SESSION['user_id'];
 
-    if (in_array($status, ['approved', 'rejected'])) {
-        $stmt = $conn->prepare("UPDATE projects SET status = ? WHERE id = ?");
+    if ($status === 'approved') {
+        $stmt = $conn->prepare("UPDATE projects SET status = ?, approved_by = ? WHERE id = ?");
+        $stmt->bind_param('sii', $status, $supervisorId, $projectId);
+    } elseif ($status === 'rejected') {
+        // عند الرفض، يمكننا إما تعيين approved_by إلى NULL أو تركه كما هو
+        $stmt = $conn->prepare("UPDATE projects SET status = ?, approved_by = NULL WHERE id = ?");
         $stmt->bind_param('si', $status, $projectId);
+    }
+    
+    if (isset($stmt)) {
         $stmt->execute();
     }
 }
 
-// جلب جميع المشاريع مع أسماء الطلاب والأقسام
+// جلب جميع المشاريع مع أسماء الطلاب والأقسام والمشرفين (إذا وجد)
 $query = "
     SELECT p.id, p.title, p.summary, p.year, p.status, p.pdf_file, p.code_file,
            u.username AS student_name,
-           s.name AS section_name
+           s.name AS section_name,
+           sup.username AS supervisor_name
     FROM projects p
     JOIN users u ON p.student_id = u.id
     JOIN sections s ON p.section_id = s.id
+    LEFT JOIN users sup ON p.approved_by = sup.id
     ORDER BY p.uploaded_at DESC
 ";
 $result = $conn->query($query);
@@ -128,6 +138,9 @@ $result = $conn->query($query);
               <th>السنة</th>
               <th>الملفات</th>
               <th>الحالة</th>
+              <?php if ($_SESSION['role'] === 'admin'): ?>
+              <th>تم القبول بواسطة</th>
+              <?php endif; ?>
               <th>إجراء</th>
             </tr>
           </thead>
@@ -155,6 +168,9 @@ $result = $conn->query($query);
                   ?>
                 </span>
               </td>
+              <?php if ($_SESSION['role'] === 'admin'): ?>
+              <td><?php echo $project['status'] == 'approved' && $project['supervisor_name'] ? htmlspecialchars($project['supervisor_name']) : 'N/A'; ?></td>
+              <?php endif; ?>
               <td>
                 <?php if($project['status'] == 'pending'): ?>
                 <form method="POST" style="display:inline;">

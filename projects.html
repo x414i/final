@@ -28,7 +28,7 @@
     <section class="main-content">
       <div class="main-content-card">
         <div id="projects-list">
-          <div class="">مثال: مشروع تخرج في الذكاء الاصطناعي - 2025</div>
+          <!-- Projects will be loaded here by JavaScript -->
         </div>
       </div>
     </section>
@@ -37,6 +37,52 @@
       جميع الحقوق محفوظة &copy; كلية تقنية المعلومات 2025
     </footer>
   </div>
+  <script>
+    // Function to fetch and display projects
+    async function fetchAndDisplayProjects() {
+      const projectsListDiv = document.getElementById('projects-list');
+      projectsListDiv.innerHTML = 'جاري تحميل المشاريع...'; // Loading message
+
+      try {
+        const response = await fetch('projects.php'); // Fetch data from the PHP endpoint
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const projects = await response.json(); // Parse JSON response
+
+        projectsListDiv.innerHTML = ''; // Clear loading message
+
+        if (projects.length === 0) {
+          projectsListDiv.innerHTML = '<p>لا توجد مشاريع لعرضها حاليًا.</p>';
+          return;
+        }
+
+        projects.forEach(project => {
+          const projectCard = document.createElement('div');
+          projectCard.className = 'project-card'; // Apply a class for styling
+
+          projectCard.innerHTML = `
+            <div class="project-title">${project.title}</div>
+            <div class="project-meta">
+              القسم: ${project.section} | السنة: ${project.year} | الطالب: ${project.student}
+            </div>
+            <div class="project-summary">${project.summary}</div>
+            <div class="project-files">
+              ${project.pdf_file ? `<a href="uploads/${project.pdf_file}" target="_blank">تحميل PDF</a>` : ''}
+              ${project.code_file ? `<a href="uploads/${project.code_file}" target="_blank">تحميل الكود</a>` : ''}
+            </div>
+          `;
+          projectsListDiv.appendChild(projectCard);
+        });
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+        projectsListDiv.innerHTML = '<p>حدث خطأ أثناء تحميل المشاريع. الرجاء المحاولة مرة أخرى لاحقًا.</p>';
+      }
+    }
+
+    // Call the function when the page loads
+    document.addEventListener('DOMContentLoaded', fetchAndDisplayProjects);
+  </script>
 </body>
 
 </html>
